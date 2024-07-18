@@ -12,8 +12,7 @@ from torch.nn.utils.rnn import pad_sequence
 
 
 def ctc_greedy_decoder(logits, vocab):
-
-    pad_id = vocab['[PAD]']
+    pad_id = vocab["[PAD]"]
 
     # Apply softmax to logits to get probabilities
     probs = F.softmax(logits, dim=-1)
@@ -32,11 +31,12 @@ def ctc_greedy_decoder(logits, vocab):
             index = index.item()
             if index != prev_index:
                 if index != pad_id:
-                    decoded.append(index_to_char.get(index, '[UNK]'))
+                    decoded.append(index_to_char.get(index, "[UNK]"))
                 prev_index = index
-        decoded_sequences.append(''.join(decoded).replace('|', ' '))
+        decoded_sequences.append("".join(decoded).replace("|", " "))
 
     return decoded_sequences
+
 
 def load_model(config, ckpt_path):
     # Load model
@@ -66,8 +66,10 @@ def perform_inference(model, wavs, vocab):
     prediction = ctc_greedy_decoder(logits, vocab)
 
     return prediction
+
+
 def load_vocab(vocab_path):
-    with open(vocab_path, 'r') as f:
+    with open(vocab_path, "r") as f:
         vocab = json.load(f)
     return vocab
 
@@ -79,7 +81,6 @@ class Config:
 
 
 def read_and_resample_wav(wav_path, target_sr=16000):
-
     # Load the audio file
     y, sr = sf.read(wav_path)
 
@@ -90,6 +91,7 @@ def read_and_resample_wav(wav_path, target_sr=16000):
         sr = target_sr
 
     return y, sr
+
 
 # Example usage:
 def main(args):
@@ -103,7 +105,7 @@ def main(args):
     parent_dir = ckpt_path.parent
 
     # Load vocab.json from the parent directory
-    vocab_path = parent_dir / 'vocab.json'
+    vocab_path = parent_dir / "vocab.json"
     if not vocab_path.is_file():
         print(f"vocab.json not found in '{parent_dir}'.")
         return
@@ -128,12 +130,14 @@ def main(args):
     print(prediction)
 
 
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Inference script for XUES model")
-    parser.add_argument('--ckpt_path', type=str, required=True, help='Path to the checkpoint file')
-    parser.add_argument('--audio', type=str, required=True, help='Path to the audio fle')
+    parser.add_argument(
+        "--ckpt_path", type=str, required=True, help="Path to the checkpoint file"
+    )
+    parser.add_argument(
+        "--audio", type=str, required=True, help="Path to the audio fle"
+    )
     args = parser.parse_args()
 
     main(args)

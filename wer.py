@@ -11,11 +11,13 @@ from inference import load_model, load_vocab, perform_inference, Config
 wer_metric = evaluate.load("wer")
 cer_metric = evaluate.load("cer")
 
+
 def is_target_text_in_range(ref):
     if ref.strip() == "ignore time segment in scoring":
         return False
     else:
         return ref.strip() != ""
+
 
 def get_text(sample):
     if "text" in sample:
@@ -30,9 +32,10 @@ def get_text(sample):
         return sample["transcription"]
     else:
         raise ValueError(
-            f"Expected transcript column of either 'text', 'sentence', 'normalized_text' or 'transcript'. Got sample of "
+            "Expected transcript column of either 'text', 'sentence', 'normalized_text' or 'transcript'. Got sample of "
             ".join{sample.keys()}. Ensure a text column name is present in the dataset."
         )
+
 
 def get_text_column_names(column_names):
     if "text" in column_names:
@@ -45,6 +48,7 @@ def get_text_column_names(column_names):
         return "transcript"
     elif "transcription" in column_names:
         return "transcription"
+
 
 def data(dataset):
     for i, item in enumerate(dataset):
@@ -77,11 +81,13 @@ def main(args):
     )
     text_column_name = get_text_column_names(dataset.column_names)
     dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
-    dataset = dataset.filter(is_target_text_in_range, input_columns=[text_column_name], num_proc=2)
+    dataset = dataset.filter(
+        is_target_text_in_range, input_columns=[text_column_name], num_proc=2
+    )
     predictions = []
     references = []
     with torch.no_grad():
-        for item in tqdm(data(dataset), total=len(dataset), desc='Decode Progress'):
+        for item in tqdm(data(dataset), total=len(dataset), desc="Decode Progress"):
             prediction = perform_inference(model, item["array"], vocab_dict)
 
             predictions.append(prediction[0])
@@ -93,7 +99,6 @@ def main(args):
     cer = round(100 * cer, 2)
     print("\nWER : ", wer)
     print("CER : ", cer)
-
 
 
 if __name__ == "__main__":

@@ -11,41 +11,43 @@ from accelerate import Accelerator
 import json
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
-from typing import Optional, Union
+from typing import Optional
 from dataclasses import dataclass, field
 from transformers import HfArgumentParser, AdamW, get_cosine_schedule_with_warmup
 from tqdm import tqdm
 from model import XeusForCTC
 
 
-
-
 MAX_DURATION_IN_SECONDS = 40.0
 MIN_DURATION_IN_SECONDS = 1.0
 
+
 def is_audio_length_in_range(input_length):
-    return input_length < MAX_DURATION_IN_SECONDS and input_length > MIN_DURATION_IN_SECONDS
+    return (
+        input_length < MAX_DURATION_IN_SECONDS
+        and input_length > MIN_DURATION_IN_SECONDS
+    )
+
 
 def clean_up_data(batch, config):
     # Precompile the regex pattern if 'remove_special_characters' is enabled
-    chars_to_remove_regex = '[\,\?\.\!\-\;\:\"\“\%\‘\”\�\'\»\«\]\[\_]'
+    chars_to_remove_regex = "[\,\?\.\!\-\;\:\"\“\%\‘\”\�'\»\«\]\[\_]"
 
     try:
-
         sentence = batch["sentence"]
 
         # Remove leading and trailing whitespace
         sentence = sentence.strip()
 
         # Replace newlines and carriage returns with a space (or you could use '')
-        sentence = sentence.replace('\n', ' ')
+        sentence = sentence.replace("\n", " ")
 
         if config.preprocessing.text.remove_special_characters:
-            sentence = re.sub(chars_to_remove_regex, '', sentence)
+            sentence = re.sub(chars_to_remove_regex, "", sentence)
         if config.preprocessing.text.lowercase:
             sentence = sentence.lower()
         if config.preprocessing.text.remove_latin_characters:
-            sentence = re.sub(r'[a-z]+', '', sentence)
+            sentence = re.sub(r"[a-z]+", "", sentence)
 
         # Update the batch with the cleaned sentence
         batch["sentence"] = sentence
@@ -75,10 +77,11 @@ def save_vocab_file(source, dest):
 
 
 def normalize_dataset(dataset, config):
-
     cleanup_fn = partial(clean_up_data, config=config)
     # Apply the preprocessing function to the dataset
-    return dataset.map(cleanup_fn, num_proc=config.num_workers)  # Ensure batched=True if the function expects batched inputs
+    return dataset.map(
+        cleanup_fn, num_proc=config.num_workers
+    )  # Ensure batched=True if the function expects batched inputs
 
 
 def create_custom_dataset(input_directory, split):
@@ -89,7 +92,7 @@ def create_custom_dataset(input_directory, split):
     for root, dirs, files in os.walk(f"{input_directory}/{split}"):
         for file in files:
             # Check if the current file is a WAV file
-            if file.endswith('.wav'):
+            if file.endswith(".wav"):
                 # Get the base name of the file (without extension)
                 base_name = os.path.splitext(file)[0]
                 # Construct the path for the corresponding text file
@@ -98,27 +101,22 @@ def create_custom_dataset(input_directory, split):
                 # Check if the text file exists
                 if os.path.exists(text_file_path):
                     # Read and print the content of the text file
-                    with open(text_file_path, 'r', encoding='utf-8') as text_file:
+                    with open(text_file_path, "r", encoding="utf-8") as text_file:
                         content = text_file.read()
                         audio_dict.append(os.path.join(root, f"{base_name}.wav"))
                         sentence_dict.append(content)
                 else:
                     print(f"Text file for {file} not found.")
 
-
-    return Dataset.from_dict({
-        "audio": audio_dict,
-        "sentence": sentence_dict
-    }).cast_column("audio", Audio())
+    return Dataset.from_dict(
+        {"audio": audio_dict, "sentence": sentence_dict}
+    ).cast_column("audio", Audio())
 
 
 def create_vocabulary(batch):
     all_text = " ".join(batch["sentence"])
     vocab = list(set(all_text))
     return {"vocab": [vocab], "all_text": [all_text]}
-
-
-
 
 
 def prepare_dataset(dynamic_datasets, num_workers, config):
@@ -139,18 +137,21 @@ def prepare_dataset(dynamic_datasets, num_workers, config):
                 dataset = load_dataset(dataset, split=split)
                 # dataset = load_dataset(dataset_name, split=f"{split}[:1000]")
 
-
             # Ensure the audio field exists before casting
             if audio_field in dataset.column_names:
                 dataset = dataset.cast_column(audio_field, Audio(sampling_rate))
             else:
-                raise ValueError(f"The audio field {audio_field} does not exist in the dataset {dataset}.")
+                raise ValueError(
+                    f"The audio field {audio_field} does not exist in the dataset {dataset}."
+                )
 
             # Rename the text field if necessary
             if text_field in dataset.column_names and text_field != "sentence":
                 dataset = dataset.rename_column(text_field, "sentence")
             elif text_field not in dataset.column_names:
-                raise ValueError(f"The text field {text_field} does not exist in the dataset {dataset}.")
+                raise ValueError(
+                    f"The text field {text_field} does not exist in the dataset {dataset}."
+                )
 
             # Remove unwanted columns
             required_columns = ["audio", "sentence"]
@@ -160,27 +161,34 @@ def prepare_dataset(dynamic_datasets, num_workers, config):
             combined_dataset.append(dataset)
         except Exception as e:
             # Instead of printing the error, you can raise it to exit the function
-            raise Exception(f"An error occurred while preparing the dataset {dataset}: {e}")
+            raise Exception(
+                f"An error occurred while preparing the dataset {dataset}: {e}"
+            )
 
     # Concatenate and shuffle datasets
     ds_to_return = concatenate_datasets(combined_dataset)
     ds_to_return = ds_to_return.shuffle(seed=22)
 
     ds_to_return = normalize_dataset(ds_to_return, config)
-    vocab = ds_to_return.map(create_vocabulary, batched=True, batch_size=-1, keep_in_memory=False,
-                                         remove_columns=ds_to_return.column_names, num_proc=num_workers)
+    vocab = ds_to_return.map(
+        create_vocabulary,
+        batched=True,
+        batch_size=-1,
+        keep_in_memory=False,
+        remove_columns=ds_to_return.column_names,
+        num_proc=num_workers,
+    )
 
     return vocab, ds_to_return
 
 
 def save_vocab_json(vocab_dict, path):
     save_path = Path(path) / "vocab.json"
-    with open(save_path, 'w', encoding='utf-8') as vocab_file:
+    with open(save_path, "w", encoding="utf-8") as vocab_file:
         json.dump(vocab_dict, vocab_file, ensure_ascii=False)
 
 
 def text_to_char_sequence(vocab, text_array):
-
     sequences = []
     for text in text_array:
         # Trim leading and trailing spaces, and replace spaces between sentences with |
@@ -209,7 +217,6 @@ def create_collate_fn(vocab_dict):
         return wavs, labels, wav_lengths
 
     return collate_fn
-
 
 
 from sconf import Config
@@ -244,11 +251,11 @@ def load_checkpoint(ckpt_path):
     return step
 
 
-
 # Function to save checkpoint
 def save_checkpoint(step, ckpt_dir):
     accelerator.save_state(f"{ckpt_dir}/step_{step}")
     print(f"Checkpoint saved at step {step} in {ckpt_dir}")
+
 
 @dataclass
 class ScriptArguments:
@@ -257,7 +264,10 @@ class ScriptArguments:
     """
 
     config: Optional[str] = field(metadata={"help": "training config file"})
-    exp_version: Optional[str] = field(default="", metadata={"help": "experiment version"})
+    exp_version: Optional[str] = field(
+        default="", metadata={"help": "experiment version"}
+    )
+
 
 parser = HfArgumentParser(ScriptArguments)
 script_args = parser.parse_args_into_dataclasses()[0]
@@ -268,12 +278,14 @@ if not config.get("exp_name", False):
     config.exp_name = basename(script_args.config).split(".")[0]
 
 config.exp_version = (
- datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     if not script_args.exp_version
     else script_args.exp_version
 )
 
-vocab_train, train_set = prepare_dataset(config.train_datasets, config.num_workers, config)
+vocab_train, train_set = prepare_dataset(
+    config.train_datasets, config.num_workers, config
+)
 vocab_test, val_set = prepare_dataset(config.eval_datasets, config.num_workers, config)
 vocab_list = list(set(vocab_train["vocab"][0]) | set(vocab_test["vocab"][0]))
 vocab_dict = {v: k for k, v in enumerate(sorted(vocab_list))}
@@ -303,7 +315,7 @@ train_dataloader = DataLoader(
     collate_fn=create_collate_fn(vocab_dict),
     batch_size=config.train_batch_size,
     shuffle=True,
-    drop_last=True
+    drop_last=True,
 )
 
 eval_dataloader = DataLoader(
@@ -311,18 +323,25 @@ eval_dataloader = DataLoader(
     collate_fn=create_collate_fn(vocab_dict),
     batch_size=config.eval_batch_size,
     shuffle=False,
-    drop_last=True
+    drop_last=True,
 )
 
 model = XeusForCTC(config, train=True)
 
 optimizer = AdamW(model.parameters(), lr=config.learning_rate, betas=(0.9, 0.999))
 
-scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=config.warmup_steps, num_training_steps=config.total_steps)
+scheduler = get_cosine_schedule_with_warmup(
+    optimizer,
+    num_warmup_steps=config.warmup_steps,
+    num_training_steps=config.total_steps,
+)
 from accelerate import DistributedDataParallelKwargs
 
 ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
-accelerator = Accelerator(kwargs_handlers=[ddp_kwargs], gradient_accumulation_steps=config.gradient_accumulation_steps)
+accelerator = Accelerator(
+    kwargs_handlers=[ddp_kwargs],
+    gradient_accumulation_steps=config.gradient_accumulation_steps,
+)
 
 
 model, optimizer, train_dataloader, eval_dataloader, scheduler = accelerator.prepare(
@@ -331,7 +350,7 @@ model, optimizer, train_dataloader, eval_dataloader, scheduler = accelerator.pre
 
 # Load from checkpoint if available
 start_step = 0
-if config.ckpt_path !="" and os.path.exists(config.ckpt_path):
+if config.ckpt_path != "" and os.path.exists(config.ckpt_path):
     start_step = load_checkpoint(config.ckpt_path)
     print(f"Resumed from checkpoint at step {start_step}")
 
@@ -357,7 +376,11 @@ while True:
             progress_bar.update(1)
             global_step += 1
 
-        if global_step % config.logging_steps == 0 and accelerator.is_main_process and global_step != 0:
+        if (
+            global_step % config.logging_steps == 0
+            and accelerator.is_main_process
+            and global_step != 0
+        ):
             print(f"Step {global_step}, Train Loss: {loss}")
 
         if global_step % config.save_steps == 0 and global_step != 0:
@@ -385,4 +408,3 @@ while True:
 
     if global_step >= config.total_steps:
         break
-

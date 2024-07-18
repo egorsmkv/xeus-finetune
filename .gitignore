@@ -5,3 +5,4 @@ vocab.json
 __pycache__/
 step_*
 .venv/
+.ruff_cache/
