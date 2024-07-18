@@ -398,7 +398,7 @@ while True:
                 if step > config.validation_steps:
                     break
                 wavs, labels, wav_lengths = batch
-                with torch.no_grad():
+                with torch.inference_mode():
                     outputs = model(wavs, labels, wav_lengths)
                 loss, _, _ = outputs
                 losses.append(accelerator.gather(loss))
