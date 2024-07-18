@@ -95,7 +95,7 @@ def create_custom_dataset(input_directory, split):
     sentence_dict = []
 
     # Walk through the input directory
-    for root, dirs, files in os.walk(f"{input_directory}/{split}"):
+    for root, _, files in os.walk(f"{input_directory}/{split}"):
         for file in files:
             # Check if the current file is a WAV file
             if file.endswith(".wav"):

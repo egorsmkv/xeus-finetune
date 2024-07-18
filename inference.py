@@ -44,7 +44,6 @@ def ctc_greedy_decoder(logits, vocab):
 
 def load_model(config, ckpt_path):
     # Load model
-
     model = XeusForCTC(config)
 
     # Load checkpoint
@@ -54,8 +53,10 @@ def load_model(config, ckpt_path):
             state_dict[key] = f.get_tensor(key)
 
     model.load_state_dict(state_dict)
+
     # Set model to evaluation mode
     model.eval()
+
     return model
 
 
@@ -85,7 +86,7 @@ class Config:
             setattr(self, key, value)
 
 
-def read_and_resample_wav(wav_path, target_sr=16000):
+def read_and_resample_wav(wav_path, target_sr=16_000):
     # Load the audio file
     y, sr = sf.read(wav_path)
 
