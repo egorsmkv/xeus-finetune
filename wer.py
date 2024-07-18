@@ -1,11 +1,15 @@
-import torch
-import argparse
 import os
-from pathlib import Path
-import evaluate
-from tqdm import tqdm
+import argparse
 import shutil
+from pathlib import Path
+
+import torch
+
+import evaluate
 from datasets import load_dataset, Audio
+
+from tqdm import tqdm
+
 from inference import load_model, load_vocab, perform_inference, Config
 
 wer_metric = evaluate.load("wer")
@@ -15,8 +19,8 @@ cer_metric = evaluate.load("cer")
 def is_target_text_in_range(ref):
     if ref.strip() == "ignore time segment in scoring":
         return False
-    else:
-        return ref.strip() != ""
+
+    return ref.strip() != ""
 
 
 def get_text(sample):
@@ -51,7 +55,7 @@ def get_text_column_names(column_names):
 
 
 def data(dataset):
-    for i, item in enumerate(dataset):
+    for item in dataset:
         yield {**item["audio"], "reference": get_text(item)}
 
 
@@ -86,7 +90,7 @@ def main(args):
     )
     predictions = []
     references = []
-    with torch.no_grad():
+    with torch.inference_mode():
         for item in tqdm(data(dataset), total=len(dataset), desc="Decode Progress"):
             prediction = perform_inference(model, item["array"], vocab_dict)
 
@@ -97,7 +101,9 @@ def main(args):
     wer = round(100 * wer, 2)
     cer = cer_metric.compute(references=references, predictions=predictions)
     cer = round(100 * cer, 2)
-    print("\nWER : ", wer)
+
+    print("---")
+    print("WER : ", wer)
     print("CER : ", cer)
 
 
@@ -132,5 +138,4 @@ if __name__ == "__main__":
         help="Split of the dataset. Eg. 'test'",
     )
 
-    args = parser.parse_args()
-    main(args)
+    main(parser.parse_args())

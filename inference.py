@@ -1,14 +1,18 @@
-import torch
-from pathlib import Path
 import os
 import json
-from model import XeusForCTC
-from safetensors import safe_open
 import argparse
-import torch.nn.functional as F
+from pathlib import Path
+
 import soundfile as sf
 from scipy.signal import resample
+
+import torch
+import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_sequence
+
+from safetensors import safe_open
+
+from model import XeusForCTC
 
 
 def ctc_greedy_decoder(logits, vocab):
@@ -59,8 +63,9 @@ def perform_inference(model, wavs, vocab):
     # Tokenize input text
     wav_lengths = torch.LongTensor([len(wav) for wav in [wavs]])
     wavs = pad_sequence(torch.Tensor([wavs]), batch_first=True)
-    with torch.no_grad():
-        loss, logits, _ = model(wavs, None, wav_lengths)
+
+    with torch.inference_mode():
+        _, logits, _ = model(wavs, None, wav_lengths)
 
     # Get prediction
     prediction = ctc_greedy_decoder(logits, vocab)
@@ -111,7 +116,7 @@ def main(args):
         return
 
     vocab_dict = load_vocab(vocab_path)
-    # print(vocab_dict)
+
     dummy_config = {
         "vocab_size": len(vocab_dict),
         "pad_token_id": vocab_dict["[PAD]"],
@@ -121,9 +126,10 @@ def main(args):
     }
 
     config = Config(dummy_config)
+
     # Load the model
     model = load_model(config, args.ckpt_path)
-    audio, sr = read_and_resample_wav(args.audio, target_sr=16000)
+    audio, _ = read_and_resample_wav(args.audio, target_sr=16_000)
 
     prediction = perform_inference(model, audio, vocab_dict)
 
@@ -132,12 +138,12 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Inference script for XUES model")
+
     parser.add_argument(
         "--ckpt_path", type=str, required=True, help="Path to the checkpoint file"
     )
     parser.add_argument(
         "--audio", type=str, required=True, help="Path to the audio fle"
     )
-    args = parser.parse_args()
 
-    main(args)
+    main(parser.parse_args())

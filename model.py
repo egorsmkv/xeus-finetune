@@ -1,10 +1,13 @@
-from torch import nn
-from espnet2.tasks.ssl import SSLTask
-from sconf import Config
-from argparse import Namespace
-import torch
 import os
 from typing import Union, Optional
+from argparse import Namespace
+
+import torch
+import torch.nn as nn
+
+from espnet2.tasks.ssl import SSLTask
+
+from sconf import Config
 
 
 def dict_to_namespace(config_dict):

@@ -1,21 +1,27 @@
-import torch
 import os
-from os.path import basename
-from pathlib import Path
-import datetime
-from datasets import load_dataset, Audio, Dataset, concatenate_datasets
-import shutil
-from functools import partial
 import re
-from accelerate import Accelerator
 import json
-from torch.utils.data import DataLoader
-from torch.nn.utils.rnn import pad_sequence
+import shutil
+import datetime
+from functools import partial
 from typing import Optional
 from dataclasses import dataclass, field
-from transformers import HfArgumentParser, AdamW, get_cosine_schedule_with_warmup
+from os.path import basename
+from pathlib import Path
+
+import torch
+from torch.utils.data import DataLoader
+from torch.nn.utils.rnn import pad_sequence
+
 from tqdm import tqdm
+
+from transformers import HfArgumentParser, AdamW, get_cosine_schedule_with_warmup
+from datasets import load_dataset, Audio, Dataset, concatenate_datasets
+from accelerate import Accelerator, DistributedDataParallelKwargs
+
+
 from model import XeusForCTC
+from sconf import Config
 
 
 MAX_DURATION_IN_SECONDS = 40.0
@@ -207,7 +213,7 @@ def create_collate_fn(vocab_dict):
         wavs = [item["array"] for item in audio]
 
         wav_lengths = torch.LongTensor([len(wav) for wav in wavs])
-        labels_length = torch.LongTensor([len(labels) for labels in labels])
+        # labels_length = torch.LongTensor([len(labels) for labels in labels])
 
         labels = [torch.LongTensor(label) for label in labels]
 
@@ -219,29 +225,26 @@ def create_collate_fn(vocab_dict):
     return collate_fn
 
 
-from sconf import Config
+# def create_collate_fn(vocab_dict):
+#     def collate_fn(batch):
+#         audio = [item["audio"] for item in batch]
 
+#         sentence = [item["sentence"] for item in batch]
+#         labels = text_to_char_sequence(vocab_dict, sentence)
 
-def create_collate_fn(vocab_dict):
-    def collate_fn(batch):
-        audio = [item["audio"] for item in batch]
+#         wavs = [torch.tensor(item["array"], dtype=torch.float32) for item in audio]
 
-        sentence = [item["sentence"] for item in batch]
-        labels = text_to_char_sequence(vocab_dict, sentence)
+#         wav_lengths = torch.LongTensor([len(wav) for wav in wavs])
+#         # labels_length = torch.LongTensor([len(label) for label in labels])
 
-        wavs = [torch.tensor(item["array"], dtype=torch.float32) for item in audio]
+#         labels = [torch.LongTensor(label) for label in labels]
 
-        wav_lengths = torch.LongTensor([len(wav) for wav in wavs])
-        labels_length = torch.LongTensor([len(label) for label in labels])
+#         wavs = pad_sequence(wavs, batch_first=True)
+#         labels = pad_sequence(labels, batch_first=True, padding_value=-1)
 
-        labels = [torch.LongTensor(label) for label in labels]
+#         return wavs, labels, wav_lengths
 
-        wavs = pad_sequence(wavs, batch_first=True)
-        labels = pad_sequence(labels, batch_first=True, padding_value=-1)
-
-        return wavs, labels, wav_lengths
-
-    return collate_fn
+#     return collate_fn
 
 
 # Function to load checkpoint
@@ -335,7 +338,6 @@ scheduler = get_cosine_schedule_with_warmup(
     num_warmup_steps=config.warmup_steps,
     num_training_steps=config.total_steps,
 )
-from accelerate import DistributedDataParallelKwargs
 
 ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
 accelerator = Accelerator(
