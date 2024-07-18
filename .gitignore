@@ -1,0 +1,7 @@
+XEUS
+hindi
+.idea
+vocab.json
+__pycache__/
+step_*
+.venv/
