@@ -39,6 +39,26 @@ uv pip install -r requirements.txt
 uv pip install -r requirements-dev.txt
 ```
 
+## Fine-tuning
+
+1. Authenticate with HF
+
+```shell
+huggingface-cli login
+```
+
+2. Copy a config file and change datasets you want to use and hparams
+
+```shell
+cp configs/hi_hf.yaml configs/uk_hf.yaml
+```
+
+3. Start fine-tuning
+
+```shell
+accelerate launch finetune.py --config configs/uk_hf.yaml
+```
+
 ## Development
 
 Check and format the code:

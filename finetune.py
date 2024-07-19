@@ -138,10 +138,9 @@ def prepare_dataset(dynamic_datasets, num_workers, config):
 
             # Load the dataset
             if "name" in dataset_config:
-                dataset = load_dataset(dataset, dataset_config.name, split=split)
+                dataset = load_dataset(dataset, dataset_config.name, split=split, trust_remote_code=True)
             else:
-                dataset = load_dataset(dataset, split=split)
-                # dataset = load_dataset(dataset_name, split=f"{split}[:1000]")
+                dataset = load_dataset(dataset, split=split, trust_remote_code=True)
 
             # Ensure the audio field exists before casting
             if audio_field in dataset.column_names:
