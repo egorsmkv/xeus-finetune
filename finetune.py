@@ -24,17 +24,6 @@ from model import XeusForCTC
 from sconf import Config
 
 
-MAX_DURATION_IN_SECONDS = 40.0
-MIN_DURATION_IN_SECONDS = 1.0
-
-
-def is_audio_length_in_range(input_length):
-    return (
-        input_length < MAX_DURATION_IN_SECONDS
-        and input_length > MIN_DURATION_IN_SECONDS
-    )
-
-
 def clean_up_data(batch, config):
     # Precompile the regex pattern if 'remove_special_characters' is enabled
     chars_to_remove_regex = "[\,\?\.\!\-\;\:\"\“\%\‘\”\�'\»\«\]\[\_]"
