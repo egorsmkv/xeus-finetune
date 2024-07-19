@@ -76,7 +76,7 @@ Run the following command to calculate Word Error Rate:
 python eval.py --ckpt_path <checkpoint path> --dataset <dataset> --name <subset> --split <split>
 
 # example
-python eval.py --ckpt_path ./step_2000 --dataset google/fleurs --name hi_in --split test
+python eval.py --ckpt_path ./step_2000 --dataset mozilla-foundation/common_voice_17_0 --name uk --split test
 ```
 
 ## Development
