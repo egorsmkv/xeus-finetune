@@ -57,6 +57,29 @@ cp configs/hi_hf.yaml configs/uk_hf.yaml
 
 ```shell
 accelerate launch finetune.py --config configs/uk_hf.yaml
+
+# if you want to use only one GPU
+accelerate launch --num_processes 1 finetune.py --config configs/uk_hf.yaml
+```
+
+## Inference
+
+```shell
+python inference.py --ckpt_path <checkpoint path> --audio audio.wav
+
+# example
+python inference.py --ckpt_path ./step_2000 --audio audio.wav
+```
+
+## Evaluation
+
+Run the following command to calculate Word Error Rate:
+
+```shell
+python eval.py --ckpt_path <checkpoint path> --dataset <dataset> --name <subset> --split <split>
+
+# example
+python eval.py --ckpt_path ./step_2000 --dataset google/fleurs --name hi_in --split test
 ```
 
 ## Development
@@ -71,5 +94,6 @@ ruff format
 ## TODO
 
 - [ ] Enable Flash-Attention for training
+- [ ] Set a cache_dir for `load_dataset`
 
 [1]: https://www.wavlab.org/activities/2024/xeus/

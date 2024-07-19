@@ -138,7 +138,9 @@ def prepare_dataset(dynamic_datasets, num_workers, config):
 
             # Load the dataset
             if "name" in dataset_config:
-                dataset = load_dataset(dataset, dataset_config.name, split=split, trust_remote_code=True)
+                dataset = load_dataset(
+                    dataset, dataset_config.name, split=split, trust_remote_code=True
+                )
             else:
                 dataset = load_dataset(dataset, split=split, trust_remote_code=True)
 
@@ -205,45 +207,24 @@ def text_to_char_sequence(vocab, text_array):
 
 def create_collate_fn(vocab_dict):
     def collate_fn(batch):
-        # Separate audio and text data
-        labels = text_to_char_sequence(vocab_dict, batch["sentence"])
-        audio = batch["audio"]
+        audio = [item["audio"] for item in batch]
 
-        wavs = [item["array"] for item in audio]
+        sentence = [item["sentence"] for item in batch]
+        labels = text_to_char_sequence(vocab_dict, sentence)
+
+        wavs = [torch.tensor(item["array"], dtype=torch.float32) for item in audio]
 
         wav_lengths = torch.LongTensor([len(wav) for wav in wavs])
-        # labels_length = torch.LongTensor([len(labels) for labels in labels])
+        # labels_length = torch.LongTensor([len(label) for label in labels])
 
         labels = [torch.LongTensor(label) for label in labels]
 
         wavs = pad_sequence(wavs, batch_first=True)
-        labels = pad_sequence(labels, batch_first=True)
+        labels = pad_sequence(labels, batch_first=True, padding_value=-1)
 
         return wavs, labels, wav_lengths
 
     return collate_fn
-
-
-# def create_collate_fn(vocab_dict):
-#     def collate_fn(batch):
-#         audio = [item["audio"] for item in batch]
-
-#         sentence = [item["sentence"] for item in batch]
-#         labels = text_to_char_sequence(vocab_dict, sentence)
-
-#         wavs = [torch.tensor(item["array"], dtype=torch.float32) for item in audio]
-
-#         wav_lengths = torch.LongTensor([len(wav) for wav in wavs])
-#         # labels_length = torch.LongTensor([len(label) for label in labels])
-
-#         labels = [torch.LongTensor(label) for label in labels]
-
-#         wavs = pad_sequence(wavs, batch_first=True)
-#         labels = pad_sequence(labels, batch_first=True, padding_value=-1)
-
-#         return wavs, labels, wav_lengths
-
-#     return collate_fn
 
 
 # Function to load checkpoint
@@ -359,6 +340,7 @@ if config.ckpt_path != "" and os.path.exists(config.ckpt_path):
 progress_bar = tqdm(total=config.total_steps, initial=start_step, desc="Training")
 
 model.train()
+
 global_step = 0
 while True:
     for step, batch in enumerate(train_dataloader):
@@ -370,7 +352,7 @@ while True:
             outputs = model(wavs, labels, wav_lengths)
             loss, logits, _ = outputs
             accelerator.backward(loss)
-            accelerator.clip_grad_norm_(model.parent.parameters(), config.max_grad_norm)
+            accelerator.clip_grad_norm_(model.parameters(), config.max_grad_norm)
             optimizer.step()
             scheduler.step()
             optimizer.zero_grad()

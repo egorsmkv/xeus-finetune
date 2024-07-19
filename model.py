@@ -10,10 +10,6 @@ from espnet2.tasks.ssl import SSLTask
 from sconf import Config
 
 
-def dict_to_namespace(config_dict):
-    return Namespace(**config_dict)
-
-
 class XeusForCTC(nn.Module):
     def __init__(self, config, train=False):
         super().__init__()
@@ -22,9 +18,10 @@ class XeusForCTC(nn.Module):
         ssl_dir = os.path.dirname(config.pretrained_model_path)
         ssl_config = f"{ssl_dir}/config.yaml"
         if not os.path.exists(ssl_config):
-            raise FileNotFoundError("xeusl model config file not found")
+            raise FileNotFoundError("XEUS model config file not found")
 
-        xeus_train_args = dict_to_namespace(Config(ssl_config))
+        config_dict = Config(ssl_config)
+        xeus_train_args = Namespace(**config_dict)
 
         self.xeus_model = SSLTask.build_model(xeus_train_args)
 
@@ -35,7 +32,7 @@ class XeusForCTC(nn.Module):
             self.xeus_model.load_state_dict(
                 torch.load(config.pretrained_model_path), strict=True
             )
-            print("pretrained xeusl model loaded")
+            print("pretrained XEUS model loaded")
 
         self.kernel_sizes = [10, 3, 3, 3, 3, 2, 2]
         self.strides = [5, 2, 2, 2, 2, 2, 2]

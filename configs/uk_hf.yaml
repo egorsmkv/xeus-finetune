@@ -23,13 +23,13 @@ preprocessing:
 
 
 pretrained_model_path: "./XEUS/model/xeus_checkpoint.pth"
-train_batch_size: 4
-eval_batch_size: 4
+train_batch_size: 1
+eval_batch_size: 1
 num_workers: 8
 max_grad_norm: 2.0
 debug: False
 result_path: "results"
-exp_name: "hindi"
+exp_name: "ukrainian"
 sampling_rate: 16000
 warmup_steps: 1000
 learning_rate: 3e-4
@@ -42,4 +42,5 @@ push_to_hub: False
 gradient_checkpointing: True
 total_steps: 10000
 gradient_accumulation_steps: 4
+resume_from_checkpoint: False
 ckpt_path: ""
