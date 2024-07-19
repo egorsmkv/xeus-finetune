@@ -6,9 +6,9 @@ This is a fork of https://github.com/pashanitw/xeus-finetune
 ## Required software
 
 - python3.11, python3.11-dev
-- cmake
-- uv
-- git lfs
+- build-essential, cmake
+- [uv][2]
+- git-lfs
 
 > [!NOTE]  
 > Python 3.12 cannot be used because one of the dependencies in ESPnet relies on an old package.
@@ -44,7 +44,7 @@ uv pip install -r requirements-dev.txt
 huggingface-cli login
 ```
 
-2. Copy a config file and change datasets you want to use and hparams
+2. Copy a config file, change dataset sections and hparams
 
 ```shell
 cp configs/hi_hf.yaml configs/uk_hf.yaml
@@ -94,3 +94,4 @@ ruff format
 - [ ] Set a cache_dir for `load_dataset`
 
 [1]: https://www.wavlab.org/activities/2024/xeus/
+[2]: https://github.com/astral-sh/uv
