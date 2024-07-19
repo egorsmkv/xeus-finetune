@@ -1,5 +1,8 @@
 # `xeus-finetune`
 
+> [!WARNING]  
+> Currently, this work is in progress.
+
 This repository contains training code for [the XEUS model][1] for Automatic Speech Recognition (ASR).
 This is a fork of https://github.com/pashanitw/xeus-finetune
 
